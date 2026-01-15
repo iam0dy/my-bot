@@ -6,15 +6,15 @@ from threading import Thread
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 
-# --- نظام البقاء مستيقظاً (Flask) ---
+# --- نظام Flask للبقاء مستيقظاً ---
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot is running with Cookie Support! ✅"
+    return "Bot is running on Port 8080! ✅"
 
 def run():
-    # تأكد أن المنفذ هنا يطابق المنفذ في Koyeb (8080)
+    # تم التعديل إلى 8080 ليتطابق مع إعدادات Koyeb الجديدة
     app.run(host='0.0.0.0', port=8080)
 
 def keep_alive():
@@ -29,24 +29,17 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not url.startswith("http"):
         return
     
-    msg = await update.message.reply_text("جاري التحليل والتحميل باستخدام 'نظام الهوية'... ⏳")
+    msg = await update.message.reply_text("جاري محاولة التحميل... ⏳")
     video_filename = f"vid_{update.message.message_id}.mp4"
     
-    # إعدادات yt-dlp المتقدمة مع دعم الكوكيز
     ydl_opts = {
         'format': 'best[ext=mp4]/best',
         'outtmpl': video_filename,
         'quiet': True,
         'no_warnings': True,
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'referer': 'https://www.google.com/',
     }
-
-    # التحقق من وجود ملف الكوكيز في المستودع
-    if os.path.exists('cookies.txt'):
-        ydl_opts['cookiefile'] = 'cookies.txt'
-        print("✅ تم العثور على ملف الكوكيز واستخدامه.")
-    else:
-        print("⚠️ لم يتم العثور على cookies.txt، سيتم التحميل كزائر.")
 
     try:
         loop = asyncio.get_event_loop()
@@ -56,14 +49,10 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
             with open(video_filename, 'rb') as video:
                 await update.message.reply_video(video)
         else:
-            await msg.edit_text("تعذر العثور على الفيديو. تأكد أن الرابط متاح للعامة.")
+            await msg.edit_text("تعذر التحميل. قد يحتاج الموقع لكوكيز أو أن المحتوى محمي.")
             
     except Exception as e:
-        error_msg = str(e)
-        if "sign in" in error_msg.lower() or "login required" in error_msg.lower():
-            await msg.edit_text("❌ الموقع يطلب تسجيل دخول. يرجى تحديث ملف cookies.txt.")
-        else:
-            await msg.edit_text(f"حدث خطأ: {error_msg}")
+        await msg.edit_text(f"خطأ: {str(e)[:100]}")
             
     finally:
         if os.path.exists(video_filename):
@@ -74,7 +63,6 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
 
 if __name__ == '__main__':
-    print("🚀 بدء تشغيل البوت بنظام الكوكيز...")
     keep_alive()
     application = ApplicationBuilder().token(TOKEN).build()
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), download_video))
