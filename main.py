@@ -1,26 +1,29 @@
+
 import os
 import telebot
 from yt_dlp import YoutubeDL
 
-# بيانات البوت والحساب
-API_TOKEN = 'ضع_توكن_بوتك_هنا' # تأكد من وضع التوكن الخاص بك
+# تم وضع التوكن وبيانات الحساب الوهمي مباشرة
+API_TOKEN = '7784033323:AAGY_o18u4_5_T7p9i4PqU6h_B7yR6pYf0s'
 INSTA_USER = 'jordenjr56'
 INSTA_PASS = 'kBi77w4*2X5&LEC'
 
 bot = telebot.TeleBot(API_TOKEN)
 
 @bot.message_handler(func=lambda message: True)
-def download_and_send(message):
+def download_all(message):
     url = message.text
     if "instagram.com" in url or "youtube.com" in url or "youtu.be" in url:
-        msg = bot.reply_to(message, "⏳ جارٍ التحميل... قد يستغرق الأمر ثواني.")
+        sent_msg = bot.reply_to(message, "⏳ جارٍ التحميل باستخدام الحساب الوهمي...")
         
         ydl_opts = {
             'format': 'best',
-            'outtmpl': 'downloaded_file.%(ext)s',
+            'outtmpl': 'file_%(id)s.%(ext)s',
             'username': INSTA_USER,
             'password': INSTA_PASS,
             'quiet': True,
+            'no_warnings': True,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
         }
 
         try:
@@ -34,10 +37,10 @@ def download_and_send(message):
                     else:
                         bot.send_photo(message.chat.id, f)
                 
-                os.remove(filename) # حذف الملف بعد الإرسال لتوفير المساحة
-                bot.delete_message(message.chat.id, msg.message_id)
+                os.remove(filename) 
+                bot.delete_message(message.chat.id, sent_msg.message_id)
 
         except Exception as e:
-            bot.edit_message_text(f"❌ حدث خطأ: {str(e)}", message.chat.id, msg.message_id)
+            bot.edit_message_text(f"❌ حدث خطأ: {str(e)}", message.chat.id, sent_msg.message_id)
 
 bot.polling()
