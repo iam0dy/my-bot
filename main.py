@@ -5,13 +5,14 @@ from aiogram.types import InputFile
 from aiogram.utils import executor
 import yt_dlp
 
-# Get token from environment variable (set in Koyeb dashboard)
+# Get token from environment variable (you set this in Koyeb)
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
+# Initialize bot and dispatcher
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 
-# yt-dlp options for best quality
+# yt-dlp options for best quality + cookies
 ydl_opts = {
     "format": "bestvideo+bestaudio/best",
     "outtmpl": "%(title)s.%(ext)s",
@@ -19,9 +20,11 @@ ydl_opts = {
     "noplaylist": True,
     "quiet": True,
     "no_warnings": True,
+    "cookies": "cookies.txt",  # <--- this tells yt-dlp to use your cookies file
 }
 
 async def download_media(url: str) -> str:
+    """Download media and return file path."""
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         return ydl.prepare_filename(info)
