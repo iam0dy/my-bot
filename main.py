@@ -1,69 +1,43 @@
 import os
-import yt_dlp
-import asyncio
-from flask import Flask
-from threading import Thread
-from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+import telebot
+from yt_dlp import YoutubeDL
 
-# --- نظام Flask للبقاء مستيقظاً ---
-app = Flask('')
+# بيانات البوت والحساب
+API_TOKEN = 'ضع_توكن_بوتك_هنا' # تأكد من وضع التوكن الخاص بك
+INSTA_USER = 'jordenjr56'
+INSTA_PASS = 'kBi77w4*2X5&LEC'
 
-@app.route('/')
-def home():
-    return "Bot is running on Port 8080! ✅"
+bot = telebot.TeleBot(API_TOKEN)
 
-def run():
-    # تم التعديل إلى 8080 ليتطابق مع إعدادات Koyeb الجديدة
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
-
-# --- إعدادات البوت ---
-TOKEN = "7257387654:AAG5FnKHZn4sVCvNg5_BQxmbhJ8eRqafeWs"
-
-async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    url = update.message.text
-    if not url.startswith("http"):
-        return
-    
-    msg = await update.message.reply_text("جاري محاولة التحميل... ⏳")
-    video_filename = f"vid_{update.message.message_id}.mp4"
-    
-    ydl_opts = {
-        'format': 'best[ext=mp4]/best',
-        'outtmpl': video_filename,
-        'quiet': True,
-        'no_warnings': True,
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'referer': 'https://www.google.com/',
-    }
-
-    try:
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, lambda: yt_dlp.YoutubeDL(ydl_opts).download([url]))
+@bot.message_handler(func=lambda message: True)
+def download_and_send(message):
+    url = message.text
+    if "instagram.com" in url or "youtube.com" in url or "youtu.be" in url:
+        msg = bot.reply_to(message, "⏳ جارٍ التحميل... قد يستغرق الأمر ثواني.")
         
-        if os.path.exists(video_filename):
-            with open(video_filename, 'rb') as video:
-                await update.message.reply_video(video)
-        else:
-            await msg.edit_text("تعذر التحميل. قد يحتاج الموقع لكوكيز أو أن المحتوى محمي.")
-            
-    except Exception as e:
-        await msg.edit_text(f"خطأ: {str(e)[:100]}")
-            
-    finally:
-        if os.path.exists(video_filename):
-            os.remove(video_filename)
-        try:
-            await msg.delete()
-        except:
-            pass
+        ydl_opts = {
+            'format': 'best',
+            'outtmpl': 'downloaded_file.%(ext)s',
+            'username': INSTA_USER,
+            'password': INSTA_PASS,
+            'quiet': True,
+        }
 
-if __name__ == '__main__':
-    keep_alive()
-    application = ApplicationBuilder().token(TOKEN).build()
-    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), download_video))
-    application.run_polling()
+        try:
+            with YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                filename = ydl.prepare_filename(info)
+                
+                with open(filename, 'rb') as f:
+                    if filename.endswith(('.mp4', '.mkv', '.mov')):
+                        bot.send_video(message.chat.id, f)
+                    else:
+                        bot.send_photo(message.chat.id, f)
+                
+                os.remove(filename) # حذف الملف بعد الإرسال لتوفير المساحة
+                bot.delete_message(message.chat.id, msg.message_id)
+
+        except Exception as e:
+            bot.edit_message_text(f"❌ حدث خطأ: {str(e)}", message.chat.id, msg.message_id)
+
+bot.polling()
